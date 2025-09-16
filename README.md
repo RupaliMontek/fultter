@@ -1,16 +1,34 @@
-# flutter_application_1
+# Staff Orders Flutter App
 
-A new Flutter project.
+This Flutter app lets you view, add, edit, and delete Staff Orders stored locally using SQLite.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- View all staff orders (newest first)
+- Add a new staff order
+- Edit an existing staff order
+- Delete an order with confirmation
 
-A few resources to get you started if this is your first Flutter project:
+## Tech
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- Flutter (Material 3)
+- SQLite via `sqflite`
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Run
+
+1. Ensure you have Flutter installed and set up.
+2. From the project root, run:
+
+```bash
+flutter pub get
+flutter run
+```
+
+## Structure
+
+- `lib/main.dart`: App entry point and theme
+- `lib/models/staff_order.dart`: Data model
+- `lib/data/database_helper.dart`: SQLite helper (CRUD)
+- `lib/screens/staff_orders_list_screen.dart`: List UI (view/delete + navigate)
+- `lib/screens/staff_orders_upsert_screen.dart`: Add/Edit form
+
