@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Staff Orders</title>
+	<style>
+		:root { font-family: Inter, system-ui, Arial, sans-serif; color-scheme: light dark; }
+		body { margin: 0; padding: 24px; background: #0b0c10; color: #e8e8e8; }
+		.container { max-width: 980px; margin: 0 auto; }
+		h1 { margin: 0 0 16px; font-size: 28px; }
+		.card { background: #111317; border: 1px solid #1f2430; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+		.row { display: flex; gap: 8px; align-items: center; }
+		.row > * { flex: 1; }
+		label { font-size: 12px; color: #a6adbb; display: block; margin-bottom: 4px; }
+		input, select, textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #2b3240; background: #0e1116; color: #e8e8e8; }
+		button { background: #295bff; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; }
+		button.secondary { background: #2b3240; }
+		table { width: 100%; border-collapse: collapse; }
+		th, td { padding: 10px; border-bottom: 1px solid #1f2430; text-align: left; }
+		.badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; background: #2b3240; }
+		.actions { display: flex; gap: 8px; }
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>Staff Orders</h1>
+		<div class="card">
+			<form id="order-form">
+				<div class="row">
+					<div>
+						<label for="staff">Staff</label>
+						<select id="staff" required></select>
+					</div>
+					<div>
+						<label for="title">Order Title</label>
+						<input id="title" placeholder="Enter order title" required />
+					</div>
+					<div>
+						<label for="status">Status</label>
+						<select id="status">
+							<option value="pending">Pending</option>
+							<option value="in_progress">In Progress</option>
+							<option value="completed">Completed</option>
+						</select>
+					</div>
+				</div>
+				<div class="row">
+					<div>
+						<label for="description">Description</label>
+						<textarea id="description" rows="2" placeholder="Optional details..."></textarea>
+					</div>
+				</div>
+				<div class="row" style="justify-content: flex-end;">
+					<input type="hidden" id="order-id" />
+					<button type="button" class="secondary" id="reset-btn">Reset</button>
+					<button type="submit" id="submit-btn">Add Order</button>
+				</div>
+			</form>
+		</div>
+
+		<div class="card">
+			<table>
+				<thead>
+					<tr>
+						<th>Title</th>
+						<th>Staff</th>
+						<th>Status</th>
+						<th>Created</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody id="orders-body"></tbody>
+			</table>
+		</div>
+	</div>
+
+	<script>
+		const apiBase = '/api';
+		const staffSelect = document.getElementById('staff');
+		const titleInput = document.getElementById('title');
+		const descInput = document.getElementById('description');
+		const statusSelect = document.getElementById('status');
+		const ordersBody = document.getElementById('orders-body');
+		const form = document.getElementById('order-form');
+		const resetBtn = document.getElementById('reset-btn');
+		const orderIdInput = document.getElementById('order-id');
+		const submitBtn = document.getElementById('submit-btn');
+
+		async function fetchJSON(url, options = {}) {
+			const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+			if (!res.ok) throw new Error(await res.text());
+			return res.json();
+		}
+
+		function formatDate(s) { try { return new Date(s).toLocaleString(); } catch { return s; } }
+
+		async function loadStaff() {
+			const staff = await fetchJSON(`${apiBase}/staff`);
+			staffSelect.innerHTML = '';
+			for (const s of staff) {
+				const opt = document.createElement('option');
+				opt.value = s.id; opt.textContent = `${s.name} (${s.email||'no email'})`;
+				staffSelect.appendChild(opt);
+			}
+		}
+
+		async function loadOrders() {
+			const orders = await fetchJSON(`${apiBase}/staff-orders`);
+			ordersBody.innerHTML = '';
+			for (const o of orders) {
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+					<td>${o.order_title}</td>
+					<td>${o.staff_name}</td>
+					<td><span class="badge">${o.status}</span></td>
+					<td>${formatDate(o.created_at)}</td>
+					<td class="actions">
+						<button data-id="${o.id}" class="edit-btn">Edit</button>
+					</td>
+				`;
+				ordersBody.appendChild(tr);
+			}
+		}
+
+		function resetForm() {
+			orderIdInput.value = '';
+			form.reset();
+			submitBtn.textContent = 'Add Order';
+		}
+
+		ordersBody.addEventListener('click', (e) => {
+			const btn = e.target.closest('.edit-btn');
+			if (!btn) return;
+			const row = btn.closest('tr');
+			const id = btn.getAttribute('data-id');
+			// Pull values from row by reloading list and finding entry
+			fetchJSON(`${apiBase}/staff-orders`).then((orders) => {
+				const o = orders.find(x => String(x.id) === String(id));
+				if (!o) return;
+				orderIdInput.value = o.id;
+				titleInput.value = o.order_title;
+				descInput.value = o.order_description || '';
+				statusSelect.value = o.status;
+				staffSelect.value = o.staff_id;
+				submitBtn.textContent = 'Save Changes';
+			});
+		});
+
+		form.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const payload = {
+				staff_id: Number(staffSelect.value),
+				order_title: titleInput.value.trim(),
+				order_description: descInput.value.trim(),
+				status: statusSelect.value
+			};
+			const id = orderIdInput.value;
+			if (id) {
+				await fetchJSON(`${apiBase}/staff-orders/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+			} else {
+				await fetchJSON(`${apiBase}/staff-orders`, { method: 'POST', body: JSON.stringify(payload) });
+			}
+			await loadOrders();
+			resetForm();
+		});
+
+		resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetForm(); });
+
+		(async function init() {
+			await loadStaff();
+			await loadOrders();
+		})();
+	</script>
+</body>
+</html>

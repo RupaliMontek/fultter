@@ -1,0 +1,3 @@
+Server running on http://localhost:3000
+[0mGET /api/staff [32m200[0m 2.003 ms - 115[0m
+[0mGET /api/staff-orders [32m200[0m 0.690 ms - 493[0m
